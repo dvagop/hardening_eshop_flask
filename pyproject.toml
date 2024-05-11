@@ -9,6 +9,7 @@ packages = [{include = "repl_nix_radaplanakos_eshop"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 flask = "^3.0.3"
+sqlalchemy = "^2.0.30"
 
 
 [build-system]
