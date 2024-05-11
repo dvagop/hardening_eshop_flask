@@ -25,3 +25,8 @@ def load_job_from_db(id):
       return None
     else:
       return rows[0]._asdict()
+
+
+
+  
+  
