@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> {{job.id}} -Pico eshop - </title>
+    {%include 'bootstrap.html' %}
+  </head>
+  <body>
+    {% include 'nav.html' %}
+    {%include 'banner.html'%}
+    <div class="container">
+      <h1 class="text-center mt-2 mb-4"> 
+        Pico snooped around:
+      </h1>
+    
+    <h3>First Name</h3>
+    <p>{{job.first_name}}</p>
+    <h3>Last Name</h3>
+    <p>{{job.last_name}}</p>
+    <h3>Username</h3>
+    <p>{{job.username}}</p>
+    <h3>Password</h3>
+    <p>{{job.password}}</p>
+    <h3>Email</h3>
+    <p>{{job.email}}</p>
+    </div>
+
+    
+    {%include 'footer.html' %} 
+  </body>
+</html>
+
+
