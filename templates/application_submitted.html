@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Application Submitted</title>
+    {%include 'bootstrap.html' %}
+  </head> 
+  <body>
+    <div class="container">
+    <h1 class="text-center mt-2 mb-4"> 
+      Pico snooped around:
+    </h1>
+
+    <p> Your application {{job['first_name']}} has been submitted</p> 
+      
+    {% include 'nav.html' %}
+    {%include 'banner.html'%}
+    <h4>Fist Name</h4>
+    <div>{{application['first_name']}}</div>
+    
+    <h4>Last Name</h4>
+    <div>{{application['last_name']}}</div>
+
+    <h4>Username</h4>
+    <div>{{application['username']}}</div>
+
+    <h4>Email</h4>
+    <div>{{application['email']}}</div>
+
+    <h4>Password</h4>
+    <div>{{application['password']}}</div>
+
+    <h4>Address</h4>
+    <div>{{application['address']}}</div>
+    </div>
+    {%include 'footer.html' %} 
+  </body>
+</html>

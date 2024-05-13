@@ -10,6 +10,10 @@ packages = [{include = "repl_nix_radaplanakos_eshop"}]
 python = "^3.10"
 flask = "^3.0.3"
 sqlalchemy = "^2.0.30"
+wtforms = "^3.1.2"
+flask-sqlalchemy = "^3.1.1"
+flask-wtf = "^1.2.1"
+werkzeug = "^3.0.3"
 
 
 [build-system]
