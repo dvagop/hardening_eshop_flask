@@ -24,6 +24,10 @@ class User(db.Model):
     password = db.Column(db.String(250), nullable=False)
     address = db.Column(db.String(150), nullable=False)
 
+    # Define relationship with the Carts model
+    carts = db.relationship('Carts', backref='user', lazy=True)
+    orders = db.relationship('Orders', backref='user', lazy=True)
+
 # Define the Product model
 class Product(db.Model):
     __tablename__ = 'products'
@@ -31,6 +35,33 @@ class Product(db.Model):
     name = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(50), nullable=False)
     price = db.Column(db.String(50), nullable=False)
+
+    # Define relationship with the Carts model
+    carts = db.relationship('Carts', backref='product', lazy=True)
+
+# Define the Carts model
+class Carts(db.Model):
+    __tablename__ = 'carts'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    price = db.Column(db.String(50), nullable=False)
+    date = db.Column(db.DateTime, nullable=False, server_default=db.func.current_timestamp())
+    purchased = db.Column(db.Boolean, nullable=False, default=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'))
+
+    # Define relationship with the Orders model
+    orders = db.relationship('Orders', backref='cart', lazy=True)
+
+# Define the Orders model
+class Orders(db.Model):
+    __tablename__ = 'orders'
+    order_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    shipped_status = db.Column(db.String(50))
+    order_date = db.Column(db.DateTime, nullable=False, server_default=db.func.current_timestamp())
+    total_price = db.Column(db.Numeric(10, 2), nullable=False)
+    shipping_address = db.Column(db.String(50))
 
 # Define the RegistrationForm using Flask-WTF
 class RegistrationForm(FlaskForm):
@@ -92,7 +123,10 @@ def login():
 def logout():
     session.pop('username', None)  # Clear the session (logout the user)
     flash('You have been logged out.', 'success')
-    return redirect(url_for('home'))
+    # Clear any flash messages from the session
+    session.pop('_flashes', None)
+    return redirect(url_for('login'))
+
 
 # Route for products page
 @app.route('/products', methods=['GET'])
@@ -119,6 +153,30 @@ def products():
                            search_query=search_query)
 
 
+# Route to add a product to the cart
+@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
+def add_to_cart(product_id):
+    # Check if the user is authenticated
+    if 'username' not in session:
+        # User is not logged in, redirect to the login page
+        return redirect(url_for('login'))
+
+    # Get the user ID based on the session username
+    user = User.query.filter_by(username=session['username']).first()
+    user_id = user.id
+
+    # Get the product based on the product ID
+    product = Product.query.get_or_404(product_id)
+
+    # Create a new cart entry
+    new_cart_entry = Carts(user_id=user_id, product_id=product_id, price=product.price)
+    db.session.add(new_cart_entry)
+    db.session.commit()
+
+    flash('Product added to cart successfully!', 'success')
+    return redirect(url_for('products'))
+
+
 # Route for the home page
 @app.route('/')
 def home():
@@ -126,6 +184,7 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 

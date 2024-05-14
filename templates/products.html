@@ -27,6 +27,7 @@
                 <th>Name</th>
                 <th>Description</th>
                 <th>Price</th>
+                <th>Action</th> <!-- Add a new column for Add to Cart button -->
             </tr>
         </thead>
         <tbody>
@@ -35,6 +36,11 @@
                 <td>{{ product.name }}</td>
                 <td>{{ product.description }}</td>
                 <td>{{ product.price }}</td>
+                <td>
+                    <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST">
+                        <button type="submit">Add to Cart</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
