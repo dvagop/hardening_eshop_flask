@@ -121,11 +121,30 @@ def login():
 # Route for logging out
 @app.route('/logout')
 def logout():
-    session.pop('username', None)  # Clear the session (logout the user)
+    # Check if the user is authenticated
+    if 'username' not in session:
+        # User is not logged in, redirect to the login page
+        return redirect(url_for('login'))
+
+    # Get the current user
+    user = User.query.filter_by(username=session['username']).first()
+
+    # Delete all cart items associated with the current user and with purchased=False
+    Carts.query.filter_by(user_id=user.id, purchased=False).delete()
+
+    # Commit the changes to the database
+    db.session.commit()
+
+    # Clear the session (logout the user)
+    session.pop('username', None)
+
     flash('You have been logged out.', 'success')
+
     # Clear any flash messages from the session
     session.pop('_flashes', None)
+
     return redirect(url_for('login'))
+
 
 
 # Route for products page
