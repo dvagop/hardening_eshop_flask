@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products</title>
+</head>
+<body>
+    <h1>Products</h1>
+
+    <!-- Search Form -->
+    <form action="{{ url_for('products') }}" method="GET">
+        <input type="text" name="search_query" placeholder="Search products..." value="{{ search_query }}">
+        <button type="submit">Search</button>
+    </form>
+
+    {% if search_query %}
+    <p>Results found: {{ num_results }}/{{ total_products }}</p>
+    {% endif %}
+
+    <!-- Logout link -->
+    <a href="{{ url_for('logout') }}">Logout</a>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in search_results %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td>{{ product.description }}</td>
+                <td>{{ product.price }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+
