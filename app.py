@@ -148,9 +148,13 @@ def products():
         num_results = 0
         total_products = Product.query.count()
 
+    # Get the current user's cart items
+    current_user = User.query.filter_by(username=session['username']).first()
+    cart_items = current_user.carts
+
     return render_template('products.html', search_results=search_results, 
                            num_results=num_results, total_products=total_products, 
-                           search_query=search_query)
+                           search_query=search_query, cart_items=cart_items)
 
 
 # Route to add a product to the cart

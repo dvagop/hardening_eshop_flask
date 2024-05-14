@@ -21,13 +21,33 @@
     <!-- Logout link -->
     <a href="{{ url_for('logout') }}">Logout</a>
 
+    <!-- Cart -->
+    <h2>Cart</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart_items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.price }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Product List -->
     <table>
         <thead>
             <tr>
                 <th>Name</th>
                 <th>Description</th>
                 <th>Price</th>
-                <th>Action</th> <!-- Add a new column for Add to Cart button -->
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
