@@ -1,40 +1,44 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cart</title>
+    <title>Shopping Cart</title>
+    <script>
+        function showConfirmation() {
+            const shippingAddress = document.getElementById('shipping_address').value;
+            if (!shippingAddress) {
+                alert('Please enter a shipping address.');
+                return;
+            }
+            document.getElementById('confirm_shipping_address').innerText = shippingAddress;
+            document.getElementById('confirm_total_price').innerText = '{{ total_price }}';
+            document.getElementById('confirmation_section').style.display = 'block';
+        }
+
+        function submitOrder() {
+            document.getElementById('checkout_form').submit();
+        }
+    </script>
 </head>
 <body>
-    <h1>Shopping Cart</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in cart_items %}
-            <tr>
-                <td>{{ item.product.name }}</td>
-                <td>{{ item.product.description }}</td>
-                <td>${{ item.price }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h1>Your Cart</h1>
+    <ul>
+        {% for item in cart_items %}
+        <li>{{ item.product.name }}: ${{ item.price }}</li>
+        {% endfor %}
+    </ul>
     <p>Total Price: ${{ total_price }}</p>
-    <form action="{{ url_for('checkout') }}" method="POST">
+
+    <form id="checkout_form" method="POST" action="{{ url_for('checkout') }}">
         <label for="shipping_address">Shipping Address:</label>
         <input type="text" id="shipping_address" name="shipping_address" required>
-        <button type="submit">Checkout</button>
-    </form>
+        <button type="button" onclick="showConfirmation()">Checkout</button>
 
-    <!-- Logout Button -->
-    <form action="{{ url_for('logout') }}" method="GET">
-        <button type="submit">Logout</button>
+        <div id="confirmation_section" style="display:none;">
+            <h2>Confirm Your Order</h2>
+            <p>Shipping Address: <span id="confirm_shipping_address"></span></p>
+            <p>Total Price: $<span id="confirm_total_price"></span></p>
+            <button type="button" onclick="submitOrder()">Confirm Order</button>
+        </div>
     </form>
 </body>
 </html>
