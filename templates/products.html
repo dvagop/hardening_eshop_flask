@@ -1,26 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Products</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<div class="container">
     <h1>Products</h1>
-    <form action="{{ url_for('products') }}" method="GET">
-        <input type="text" name="search_query" placeholder="Search products..." value="{{ search_query }}">
-        <button type="submit">Search</button>
+    <form action="{{ url_for('products') }}" method="GET" class="mb-3">
+        <input type="text" name="search_query" placeholder="Search products..." value="{{ search_query }}" class="form-control">
+        <button type="submit" class="btn btn-primary mt-2">Search</button>
     </form>
 
     {% if search_query %}
         <p>Results found: {{ num_results }}/{{ total_products }}</p>
     {% endif %}
 
-    <a href="{{ url_for('logout') }}">Logout</a>
-
-    {% if 'username' in session %}
+    {% if current_user.is_authenticated %}
         <h2>Cart</h2>
-        <table>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -31,7 +27,7 @@
                 {% for item in cart_items %}
                 <tr>
                     <td>{{ item.product.name }}</td>
-                    <td>{{ item.price }}</td>
+                    <td>${{ "%.2f"|format(item.price) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -39,14 +35,14 @@
 
         {% if cart_items %}
         <form action="{{ url_for('cart') }}" method="GET">
-            <button type="submit">Checkout</button>
+            <button type="submit" class="btn btn-success">Checkout</button>
         </form>
-        {% endif %}
-    {% else %}
+        {% else %}
         <p>Your cart is empty.</p>
+        {% endif %}
     {% endif %}
 
-    <table>
+    <table class="table mt-4">
         <thead>
             <tr>
                 <th>Name</th>
@@ -60,17 +56,18 @@
             <tr>
                 <td>{{ product.name }}</td>
                 <td>{{ product.description }}</td>
-                <td>{{ product.price }}</td>
+                <td>${{ "%.2f"|format(product.price) }}</td>
                 <td>
                     <form action="{{ url_for('add_to_cart', product_id=product.id) }}" method="POST">
-                        <button type="submit">Add to Cart</button>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary">Add to Cart</button>
                     </form>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-</body>
-</html>
+</div>
+{% endblock %}
 
 

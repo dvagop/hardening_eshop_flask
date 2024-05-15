@@ -1,19 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home Page</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Home Page{% endblock %}
+
+{% block content %}
+<div class="container">
     <h1>Welcome to the Home Page!</h1>
     <p>Choose an action:</p>
     <ul>
         <li><a href="{{ url_for('login') }}">Login</a></li>
         <li><a href="{{ url_for('register') }}">Register New User</a></li>
-        {% if 'username' in session %}
-        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('logout') }}">Logout</a></li> 
         {% endif %}
     </ul>
-</body>
-</html>
+</div>
+{% endblock %}
+
