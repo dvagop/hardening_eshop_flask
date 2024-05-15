@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -144,15 +144,32 @@ def login():
 
 @app.route('/logout')
 def logout():
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    if 'username' in session:
+        username = session.get('username')
+        user = User.query.filter_by(username=username).first()
+        if user:
+            # Delete all cart items for the user, regardless of purchase status
+            try:
+                num_deleted = Carts.query.filter_by(user_id=user.id).delete()
+                db.session.commit()
+                flash(f'All cart items cleared. {num_deleted} items were removed.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error("Failed to delete cart items: %s", str(e))
+                flash('Failed to clear cart items due to an error.', 'error')
+        else:
+            flash('User not found.', 'error')
 
-    user = User.query.filter_by(username=session['username']).first()
-    Carts.query.filter_by(user_id=user.id, purchased=False).delete()
-    db.session.commit()
-    session.pop('username', None)
-    flash('You have been logged out and your cart has been cleared.', 'success')
+        session.pop('username', None)
+        session.clear()
+        flash('You have been logged out.', 'success')
+    else:
+        flash('No user session found.', 'error')
+
     return redirect(url_for('login'))
+
+
+
 
 # Route for products page
 @app.route('/products', methods=['GET'])
