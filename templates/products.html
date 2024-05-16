@@ -33,7 +33,7 @@
             </tbody>
         </table>
 
-        {% if cart_items %}
+        {% if cart_items|length > 0 %}
         <form action="{{ url_for('cart') }}" method="GET">
             <button type="submit" class="btn btn-success">Checkout</button>
         </form>

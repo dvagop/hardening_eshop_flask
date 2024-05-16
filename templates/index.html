@@ -7,12 +7,15 @@
     <h1>Welcome to the Home Page!</h1>
     <p>Choose an action:</p>
     <ul>
+        {% if not current_user.is_authenticated %}
         <li><a href="{{ url_for('login') }}">Login</a></li>
         <li><a href="{{ url_for('register') }}">Register New User</a></li>
-        {% if current_user.is_authenticated %}
-        <li><a href="{{ url_for('logout') }}">Logout</a></li> 
+        {% else %}
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
         {% endif %}
     </ul>
 </div>
 {% endblock %}
+
+
 

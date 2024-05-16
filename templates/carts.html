@@ -1,54 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <script>
-        function showConfirmation() {
-            const shippingAddress = document.getElementById('shipping_address').value;
-            if (!shippingAddress) {
-                alert('Please enter a shipping address.');
-                return;
-            }
-            document.getElementById('confirm_shipping_address').innerText = shippingAddress;
-            document.getElementById('confirm_total_price').innerText = '{{ total_price }}';
-            document.getElementById('confirmation_section').style.display = 'block';
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart{% endblock %}
+
+{% block content %}
+<script>
+    function showConfirmation() {
+        const shippingAddress = document.getElementById('shipping_address').value;
+        if (!shippingAddress) {
+            alert('Please enter a shipping address.');
+            return;
         }
+        document.getElementById('confirm_shipping_address').innerText = shippingAddress;
+        document.getElementById('confirm_total_price').innerText = '{{ total_price }}';
+        document.getElementById('confirmation_section').style.display = 'block';
+    }
 
-        function submitOrder() {
-            document.getElementById('checkout_form').submit();
-        }
-    </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Your Cart</h1>
-        <ul class="list-group mb-3">
-            {% for item in cart_items %}
-            <li class="list-group-item">{{ item.product.name }}: ${{ item.price }}</li>
-            {% endfor %}
-        </ul>
-        <p>Total Price: ${{ total_price }}</p>
+    function submitOrder() {
+        document.getElementById('checkout_form').submit();
+    }
+</script>
 
-        <form id="checkout_form" method="POST" action="{{ url_for('cart') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group">
-                <label for="shipping_address">Shipping Address:</label>
-                <input type="text" id="shipping_address" name="shipping_address" class="form-control" required>
-            </div>
-            <button type="button" class="btn btn-primary" onclick="showConfirmation()">Checkout</button>
+<div class="container">
+    <h1>Your Cart</h1>
+    <ul class="list-group mb-3">
+        {% for item in cart_items %}
+        <li class="list-group-item">{{ item.product.name }}: ${{ item.price }}</li>
+        {% endfor %}
+    </ul>
+    <p>Total Price: ${{ total_price }}</p>
 
-            <div id="confirmation_section" style="display:none;" class="mt-3">
-                <h2>Confirm Your Order</h2>
-                <p>Shipping Address: <span id="confirm_shipping_address"></span></p>
-                <p>Total Price: $<span id="confirm_total_price"></span></p>
-                <button type="button" class="btn btn-success" onclick="submitOrder()">Confirm Order</button>
-            </div>
-        </form>
-    </div>
-</body>
-</html>
+    <form id="checkout_form" method="POST" action="{{ url_for('cart') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="shipping_address">Shipping Address:</label>
+            <input type="text" id="shipping_address" name="shipping_address" class="form-control" required>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="showConfirmation()">Checkout</button>
+
+        <div id="confirmation_section" style="display:none;" class="mt-3">
+            <h2>Confirm Your Order</h2>
+            <p>Shipping Address: <span id="confirm_shipping_address"></span></p>
+            <p>Total Price: $<span id="confirm_total_price"></span></p>
+            <button type="button" class="btn btn-success" onclick="submitOrder()">Confirm Order</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
 
 

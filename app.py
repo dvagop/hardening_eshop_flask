@@ -167,9 +167,12 @@ def products():
 
     total_products = Product.query.count()  # Total products in the database
 
+    # Fetch cart items for the current user
+    cart_items = list(current_user.carts.filter_by(purchased=False).all())
+
     return render_template('products.html', search_results=search_results, 
                            num_results=num_results, total_products=total_products, 
-                           search_query=search_query, cart_items=current_user.carts)
+                           search_query=search_query, cart_items=cart_items)
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 @login_required
@@ -237,10 +240,14 @@ def send_order_confirmation_email(order, user, cart_items):
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    # Fetch cart items for the current user
+    cart_items = list(current_user.carts.filter_by(purchased=False).all()) if current_user.is_authenticated else []
+
+    return render_template('index.html', cart_items=cart_items)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
