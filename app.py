@@ -11,8 +11,8 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-secret-key')
-csrf = CSRFProtect(app)  # Enable CSRF protection
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret')
+csrf = CSRFProtect(app) 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_CONNECTION_STRING']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
@@ -21,6 +21,11 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
+
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+)
 
 mail = Mail(app)
 db = SQLAlchemy(app)
@@ -48,7 +53,7 @@ class User(UserMixin, db.Model):
     address = db.Column(db.String(150), nullable=False)
     confirmed = db.Column(db.Boolean, default=False)
 
-    # Relationships
+ 
     carts = db.relationship('Carts', backref='user', lazy='dynamic')
     orders = db.relationship('Orders', backref='user', lazy=True)
 
@@ -70,7 +75,7 @@ class Product(db.Model):
     description = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Numeric(10, 2), nullable=False)
 
-    # Relationships
+   
     carts = db.relationship('Carts', backref='product', lazy=True)
 
 class Carts(db.Model):
@@ -139,14 +144,14 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
-    # Delete all cart items for the user, regardless of purchase status
+   
     if current_user.is_authenticated:
         try:
             num_deleted = Carts.query.filter_by(user_id=current_user.id).delete()
             db.session.commit()
             flash(f'All cart items cleared. {num_deleted} items were removed.', 'success')
         except Exception as e:
-            db.session.rollback()  # Rollback the transaction if there's an error
+            db.session.rollback()  
             app.logger.error("Failed to delete cart items: %s", str(e))
             flash('Failed to clear cart items due to an error.', 'error')
 
@@ -160,14 +165,14 @@ def products():
     search_query = request.args.get('search_query', '')
     if search_query:
         search_results = Product.query.filter(or_(Product.name.ilike(f'%{search_query}%'), Product.description.ilike(f'%{search_query}%'))).all()
-        num_results = len(search_results)  # Count of search results
+        num_results = len(search_results)  
     else:
         search_results = []
-        num_results = 0  # No results found
+        num_results = 0  
 
-    total_products = Product.query.count()  # Total products in the database
+    total_products = Product.query.count()  
 
-    # Fetch cart items for the current user
+    
     cart_items = list(current_user.carts.filter_by(purchased=False).all())
 
     return render_template('products.html', search_results=search_results, 
@@ -188,7 +193,7 @@ def add_to_cart(product_id):
 @login_required
 def cart():
     if request.method == 'POST':
-        # Process the checkout
+        
         cart_items = Carts.query.filter_by(user_id=current_user.id, purchased=False).all()
         total_price = sum(item.price for item in cart_items)
         shipping_address = request.form.get('shipping_address')
@@ -207,13 +212,13 @@ def cart():
             item.order_id = new_order.order_id
         db.session.commit()
 
-        # Send order confirmation email to admin
+      
         send_order_confirmation_email(new_order, current_user, cart_items)
 
         flash('Order placed successfully!', 'success')
         return redirect(url_for('home'))
 
-    # Display the cart items and checkout form
+ 
     cart_items = Carts.query.filter_by(user_id=current_user.id, purchased=False).all()
     total_price = sum(item.price for item in cart_items)
     return render_template('carts.html', cart_items=cart_items, total_price=total_price)
@@ -240,7 +245,7 @@ def send_order_confirmation_email(order, user, cart_items):
 
 @app.route('/')
 def home():
-    # Fetch cart items for the current user
+    
     cart_items = list(current_user.carts.filter_by(purchased=False).all()) if current_user.is_authenticated else []
 
     return render_template('index.html', cart_items=cart_items)
@@ -248,46 +253,3 @@ def home():
 if __name__ == '__main__':
     app.run(debug=True)
 
-
-
-
-
-
-
-
-
-
-# from flask import Flask, render_template, jsonify, request
-
-# from database import load_jobs_from_db, load_job_from_db, add_application_to_db 
-
-# app = Flask(__name__)
-
-# @app.route("/")
-# def index():
-#     jobs=load_jobs_from_db()
-#     return render_template('home.html', jobs=jobs, owner='Fallout')
-
-# @app.route("/api/jobs")
-# def list_jobs():
-#     jobs=load_jobs_from_db()
-#     return jsonify(jobs)
-
-# @app.route("/job/<id>")
-# def show_job(id):
-#     job=load_job_from_db(id)
-#     if not job:
-#         return "Not Found", 404
-#     return render_template('jobpage.html', job=job)
-
-# @app.route("/job/<id>/apply", methods= ['post'])
-# def apply_to_job(id):
-#     data=request.form
-
-#     job=load_job_from_db(id)
-#     add_application_to_db(id, data)
-#     return render_template('application_submitted.html', application=data, job=job)
-    
-    
-#if __name__=="__main__":
-#    app.run(host='0.0.0.0', debug=True)
