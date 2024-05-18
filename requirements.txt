@@ -34,3 +34,4 @@ typing_extensions
 visitor           
 Werkzeug          
 WTForms          
+captcha
