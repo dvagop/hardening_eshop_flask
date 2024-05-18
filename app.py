@@ -1,18 +1,22 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm, CSRFProtect
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import InputRequired, Email, Length, ValidationError
+from wtforms.validators import InputRequired, Email, Length
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import or_
 from flask_mail import Mail, Message
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 import os
 from datetime import datetime
+from io import BytesIO
+from captcha.image import ImageCaptcha
+import random
+import string
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret')
-csrf = CSRFProtect(app)
+csrf = CSRFProtect(app) 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_CONNECTION_STRING']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
@@ -95,12 +99,10 @@ class Orders(db.Model):
     total_price = db.Column(db.Numeric(10, 2), nullable=False)
     shipping_address = db.Column(db.String(150), nullable=False)
 
-# Custom validator for shipping address
 def valid_address(form, field):
     if not field.data.strip():
         raise ValidationError('Shipping address cannot be empty or whitespace.')
 
-# Shipping form with custom validator
 class ShippingForm(FlaskForm):
     shipping_address = StringField('Shipping Address', validators=[InputRequired(), valid_address])
     submit = SubmitField('Checkout')
@@ -117,7 +119,16 @@ class RegistrationForm(FlaskForm):
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
     password = PasswordField('Password', validators=[InputRequired()])
+    captcha = StringField('Captcha', validators=[InputRequired()])
     submit = SubmitField('Login')
+
+@app.route('/captcha')
+def captcha():
+    image = ImageCaptcha()
+    captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    session['captcha_text'] = captcha_text
+    data = image.generate(captcha_text)
+    return send_file(BytesIO(data.read()), mimetype='image/png')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -141,6 +152,10 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
+        if form.captcha.data.lower() != session.get('captcha_text', '').lower():
+            flash('Invalid CAPTCHA. Please try again.', 'error')
+            return render_template('login.html', form=form)
+
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.verify_password(form.password.data):
             login_user(user)

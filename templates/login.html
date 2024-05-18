@@ -27,9 +27,20 @@
                 {% endif %}
             </div>
             <div class="form-group">
+                <label for="captcha">Captcha</label><br>
+                <img src="{{ url_for('captcha') }}" alt="Captcha Image"><br>
+                {{ form.captcha(class="form-control") }}
+                {% if form.captcha.errors %}
+                    {% for error in form.captcha.errors %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div class="form-group">
                 {{ form.submit(class="btn btn-primary") }}
             </div>
         </form>
     </div>
 </div>
 {% endblock %}
+
