@@ -5,9 +5,9 @@
 {% block content %}
 <script>
     function showConfirmation() {
-        const shippingAddress = document.getElementById('shipping_address').value;
+        const shippingAddress = document.getElementById('shipping_address').value.trim();
         if (!shippingAddress) {
-            alert('Please enter a shipping address.');
+            alert('Please enter a valid shipping address.');
             return;
         }
         document.getElementById('confirm_shipping_address').innerText = shippingAddress;
@@ -30,10 +30,13 @@
     <p>Total Price: ${{ total_price }}</p>
 
     <form id="checkout_form" method="POST" action="{{ url_for('cart') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {{ form.csrf_token }}
         <div class="form-group">
-            <label for="shipping_address">Shipping Address:</label>
-            <input type="text" id="shipping_address" name="shipping_address" class="form-control" required>
+            {{ form.shipping_address.label }}
+            {{ form.shipping_address(class="form-control") }}
+            {% for error in form.shipping_address.errors %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endfor %}
         </div>
         <button type="button" class="btn btn-primary" onclick="showConfirmation()">Checkout</button>
 

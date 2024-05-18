@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm, CSRFProtect
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import InputRequired, Email, Length
+from wtforms.validators import InputRequired, Email, Length, ValidationError
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import or_
 from flask_mail import Mail, Message
@@ -12,7 +12,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret')
-csrf = CSRFProtect(app) 
+csrf = CSRFProtect(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_CONNECTION_STRING']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
@@ -25,6 +25,7 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
 )
 
 mail = Mail(app)
@@ -53,7 +54,6 @@ class User(UserMixin, db.Model):
     address = db.Column(db.String(150), nullable=False)
     confirmed = db.Column(db.Boolean, default=False)
 
- 
     carts = db.relationship('Carts', backref='user', lazy='dynamic')
     orders = db.relationship('Orders', backref='user', lazy=True)
 
@@ -75,7 +75,6 @@ class Product(db.Model):
     description = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Numeric(10, 2), nullable=False)
 
-   
     carts = db.relationship('Carts', backref='product', lazy=True)
 
 class Carts(db.Model):
@@ -95,6 +94,16 @@ class Orders(db.Model):
     order_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     total_price = db.Column(db.Numeric(10, 2), nullable=False)
     shipping_address = db.Column(db.String(150), nullable=False)
+
+# Custom validator for shipping address
+def valid_address(form, field):
+    if not field.data.strip():
+        raise ValidationError('Shipping address cannot be empty or whitespace.')
+
+# Shipping form with custom validator
+class ShippingForm(FlaskForm):
+    shipping_address = StringField('Shipping Address', validators=[InputRequired(), valid_address])
+    submit = SubmitField('Checkout')
 
 class RegistrationForm(FlaskForm):
     first_name = StringField('First Name', validators=[InputRequired()])
@@ -144,14 +153,13 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
-   
     if current_user.is_authenticated:
         try:
             num_deleted = Carts.query.filter_by(user_id=current_user.id).delete()
             db.session.commit()
             flash(f'All cart items cleared. {num_deleted} items were removed.', 'success')
         except Exception as e:
-            db.session.rollback()  
+            db.session.rollback()
             app.logger.error("Failed to delete cart items: %s", str(e))
             flash('Failed to clear cart items due to an error.', 'error')
 
@@ -165,18 +173,17 @@ def products():
     search_query = request.args.get('search_query', '')
     if search_query:
         search_results = Product.query.filter(or_(Product.name.ilike(f'%{search_query}%'), Product.description.ilike(f'%{search_query}%'))).all()
-        num_results = len(search_results)  
+        num_results = len(search_results)
     else:
         search_results = []
-        num_results = 0  
+        num_results = 0
 
-    total_products = Product.query.count()  
+    total_products = Product.query.count()
 
-    
     cart_items = list(current_user.carts.filter_by(purchased=False).all())
 
-    return render_template('products.html', search_results=search_results, 
-                           num_results=num_results, total_products=total_products, 
+    return render_template('products.html', search_results=search_results,
+                           num_results=num_results, total_products=total_products,
                            search_query=search_query, cart_items=cart_items)
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
@@ -192,11 +199,11 @@ def add_to_cart(product_id):
 @app.route('/cart', methods=['GET', 'POST'])
 @login_required
 def cart():
-    if request.method == 'POST':
-        
+    form = ShippingForm()
+    if request.method == 'POST' and form.validate_on_submit():
         cart_items = Carts.query.filter_by(user_id=current_user.id, purchased=False).all()
         total_price = sum(item.price for item in cart_items)
-        shipping_address = request.form.get('shipping_address')
+        shipping_address = form.shipping_address.data
 
         new_order = Orders(
             user_id=current_user.id,
@@ -212,16 +219,14 @@ def cart():
             item.order_id = new_order.order_id
         db.session.commit()
 
-      
         send_order_confirmation_email(new_order, current_user, cart_items)
 
         flash('Order placed successfully!', 'success')
         return redirect(url_for('home'))
 
- 
     cart_items = Carts.query.filter_by(user_id=current_user.id, purchased=False).all()
     total_price = sum(item.price for item in cart_items)
-    return render_template('carts.html', cart_items=cart_items, total_price=total_price)
+    return render_template('carts.html', cart_items=cart_items, total_price=total_price, form=form)
 
 def send_order_confirmation_email(order, user, cart_items):
     admin_email = os.environ.get('MAIL_USERNAME')
@@ -245,11 +250,10 @@ def send_order_confirmation_email(order, user, cart_items):
 
 @app.route('/')
 def home():
-    
     cart_items = list(current_user.carts.filter_by(purchased=False).all()) if current_user.is_authenticated else []
-
     return render_template('index.html', cart_items=cart_items)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
