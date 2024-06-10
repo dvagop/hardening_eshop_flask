@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Confirm User</title>
+</head>
+<body>
+    <h1>Confirm User</h1>
+    <p>Do you want to confirm this user?</p>
+    <ul>
+        <li>First Name: {{ user.first_name }}</li>
+        <li>Last Name: {{ user.last_name }}</li>
+        <li>Email: {{ user.email }}</li>
+        <li>Username: {{ user.username }}</li>
+        <li>Address: {{ user.address }}</li>
+    </ul>
+    <form method="POST">
+        <button type="submit" class="btn btn-primary">Confirm</button>
+    </form>
+</body>
+</html>

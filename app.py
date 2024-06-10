@@ -45,10 +45,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 mail = Mail(app)
 db = SQLAlchemy(app)
 
+# Configure Flask-Limiter
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",  # Change to a persistent storage in production, like Redis
 )
 
 login_manager = LoginManager()
@@ -160,7 +162,8 @@ def register():
         )
         db.session.add(new_user)
         db.session.commit()
-        flash('Registration successful! You can now login.', 'success')
+        send_admin_confirmation_email(new_user)
+        flash('Registration successful! Awaiting admin confirmation.', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
@@ -178,6 +181,9 @@ def login():
             return redirect(url_for('login'))
 
         if user and user.verify_password(form.password.data):
+            if not user.confirmed:
+                flash('Account not confirmed. Please contact the administrator.', 'error')
+                return redirect(url_for('login'))
             login_user(user)
             session.modified = True
             session.new = True
@@ -297,11 +303,26 @@ def send_order_confirmation_email(order, user, cart_items):
     msg.body = body
     mail.send(msg)
 
+@app.route('/confirm_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def confirm_user(user_id):
+    if not current_user.is_authenticated or not current_user.is_admin:
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('home'))
+
+    user = User.query.get_or_404(user_id)
+    if request.method == 'POST':
+        user.confirmed = True
+        db.session.commit()
+        flash('User confirmed successfully.', 'success')
+        return redirect(url_for('home'))
+
+    return render_template('confirm_user.html', user=user)
+
 @app.route('/')
 def home():
     cart_items = list(current_user.carts.filter_by(purchased=False).all()) if current_user.is_authenticated else []
     return render_template('index.html', cart_items=cart_items)
-
 
 @app.after_request
 def add_security_headers(response):
@@ -313,9 +334,15 @@ def add_security_headers(response):
     response.headers['Content-Security-Policy'] = csp
     return response
 
+def send_admin_confirmation_email(user):
+    admin_email = os.environ.get('MAIL_USERNAME')
+    subject = 'New User Registration Confirmation'
+    body = render_template('admin_confirmation_email.html', user=user)
 
+    msg = Message(subject, recipients=[admin_email])
+    msg.body = body
+    mail.send(msg)
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New User Registration Confirmation</title>
+</head>
+<body>
+    <h1>New User Registration</h1>
+    <p>A new user has registered with the following details:</p>
+    <ul>
+        <li>First Name: {{ user.first_name }}</li>
+        <li>Last Name: {{ user.last_name }}</li>
+        <li>Email: {{ user.email }}</li>
+        <li>Username: {{ user.username }}</li>
+        <li>Address: {{ user.address }}</li>
+    </ul>
+    <p>
+        <a href="{{ url_for('confirm_user', user_id=user.id) }}">Confirm this user</a>
+    </p>
+</body>
+</html>
