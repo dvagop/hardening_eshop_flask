@@ -35,3 +35,5 @@ visitor
 Werkzeug          
 WTForms          
 captcha
+
+python-dotenv
