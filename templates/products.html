@@ -11,7 +11,10 @@
     </form>
 
     {% if search_query %}
+        <p>You searched for: <strong>{{ search_query | e }}</strong></p>
         <p>Results found: {{ num_results }}/{{ total_products }}</p>
+    {% else %}
+        <p>Please enter a search query.</p>
     {% endif %}
 
     {% if current_user.is_authenticated %}
@@ -71,4 +74,6 @@
     </table>
 </div>
 {% endblock %}
+
+
 

@@ -15,6 +15,7 @@ from captcha.image import ImageCaptcha
 import io
 import random
 import string
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -159,16 +160,22 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        if form.captcha.data != session.get('captcha'):
-            flash('Invalid captcha', 'error')
-            return redirect(url_for('login'))
+        time.sleep(1)  # Introduce a delay to mitigate timing attacks
+
         user = User.query.filter_by(username=form.username.data).first()
+
+        # Check the CAPTCHA regardless of whether the user exists or the password is correct
+        if form.captcha.data != session.get('captcha'):
+            flash('Invalid username or password', 'error')
+            return redirect(url_for('login'))
+
         if user and user.verify_password(form.password.data):
             login_user(user)
             flash('Login successful!', 'success')
             return redirect(url_for('products'))
         else:
-            flash('Invalid username or password', 'error')
+            flash('Invalid username or password', 'error')  # Same generic message
+
     return render_template('login.html', form=form)
 
 @app.route('/captcha')
@@ -196,7 +203,7 @@ def logout():
 @app.route('/products', methods=['GET'])
 @login_required
 def products():
-    search_query = request.args.get('search_query', '')
+    search_query = request.args.get('search_query', '').strip()  # Trim whitespace
     if search_query:
         search_results = Product.query.filter(or_(Product.name.ilike(f'%{search_query}%'), Product.description.ilike(f'%{search_query}%'))).all()
         num_results = len(search_results)
@@ -210,6 +217,7 @@ def products():
     return render_template('products.html', search_results=search_results, 
                            num_results=num_results, total_products=total_products, 
                            search_query=search_query, cart_items=cart_items)
+
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 @login_required
