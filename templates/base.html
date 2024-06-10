@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -22,11 +24,7 @@
                     <a class="nav-link" href="{{ url_for('products') }}">Products</a>
                 </li>
                 <li class="nav-item">
-                    {% if cart_items|length > 0 %}
                     <a class="nav-link" href="{{ url_for('cart') }}">Cart</a>
-                    {% else %}
-                    <a class="nav-link disabled" href="#">Cart</a>
-                    {% endif %}
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
@@ -56,4 +54,10 @@
         {% block content %}{% endblock %}
     </div>
 
-    <script src="https://code
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="{{ url_for('static', filename='js/custom.js') }}"></script>
+</body>
+</html>
+

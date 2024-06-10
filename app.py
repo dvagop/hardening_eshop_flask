@@ -19,6 +19,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import time
 
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__, static_url_path='/static')
@@ -105,7 +106,7 @@ class Carts(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     purchased = db.Column(db.Boolean, default=False)
     quantity = db.Column(db.Integer, nullable=False, default=1)
-    order_id=db.Column(db.Integer, db.ForeignKey('orders.order_id'))
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'))
 
 class Orders(db.Model):
     __tablename__ = 'orders'
@@ -164,11 +165,11 @@ def register():
     return render_template('register.html', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("10 per 5 minutes") 
+@limiter.limit("10 per 5 minutes")
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        time.sleep(1)  
+        time.sleep(1)  # Add delay to mitigate timing attacks
 
         user = User.query.filter_by(username=form.username.data).first()
 
@@ -178,13 +179,12 @@ def login():
 
         if user and user.verify_password(form.password.data):
             login_user(user)
-          
             session.modified = True
             session.new = True
             flash('Login successful!', 'success')
             return redirect(url_for('products'))
         else:
-            flash('Invalid username or password', 'error')  
+            flash('Invalid username or password', 'error')
 
     return render_template('login.html', form=form)
 
@@ -224,8 +224,8 @@ def products():
     total_products = Product.query.count()
     cart_items = list(current_user.carts.filter_by(purchased=False).all())
 
-    return render_template('products.html', search_results=search_results, 
-                           num_results=num_results, total_products=total_products, 
+    return render_template('products.html', search_results=search_results,
+                           num_results=num_results, total_products=total_products,
                            search_query=search_query, cart_items=cart_items)
 
 
@@ -302,11 +302,18 @@ def home():
     cart_items = list(current_user.carts.filter_by(purchased=False).all()) if current_user.is_authenticated else []
     return render_template('index.html', cart_items=cart_items)
 
+
 @app.after_request
 def add_security_headers(response):
-    csp = "default-src 'self'; script-src 'self' https://stackpath.bootstrapcdn.com; style-src 'self' https://stackpath.bootstrapcdn.com https://cdnjs.cloudflare.com"
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self' https://stackpath.bootstrapcdn.com https://code.jquery.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' https://stackpath.bootstrapcdn.com https://cdnjs.cloudflare.com"
+    )
     response.headers['Content-Security-Policy'] = csp
     return response
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
