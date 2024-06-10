@@ -8,6 +8,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import or_
 from flask_mail import Mail, Message
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -54,6 +56,13 @@ def load_user(user_id):
 @app.context_processor
 def inject_user():
     return dict(current_user=current_user)
+
+# Initialize Flask-Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -157,6 +166,7 @@ def register():
     return render_template('register.html', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")  # Limit login attempts to 5 per minute
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -294,5 +304,6 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 

@@ -10,7 +10,8 @@ click
 dnspython         
 dominate         
 email_validator   
-           
+
+Flask-Limiter
 Flask-Bootstrap  
 Flask-Login      
 Flask-Mail       
