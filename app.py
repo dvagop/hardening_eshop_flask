@@ -8,8 +8,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import or_
 from flask_mail import Mail, Message
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -17,9 +15,10 @@ from captcha.image import ImageCaptcha
 import io
 import random
 import string
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import time
 
-# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__, static_url_path='/static')
@@ -45,6 +44,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 mail = Mail(app)
 db = SQLAlchemy(app)
 
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -56,13 +61,6 @@ def load_user(user_id):
 @app.context_processor
 def inject_user():
     return dict(current_user=current_user)
-
-# Initialize Flask-Limiter
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["200 per day", "50 per hour"]
-)
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -166,25 +164,27 @@ def register():
     return render_template('register.html', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")  # Limit login attempts to 5 per minute
+@limiter.limit("10 per 5 minutes") 
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        time.sleep(1)  # Introduce a delay to mitigate timing attacks
+        time.sleep(1)  
 
         user = User.query.filter_by(username=form.username.data).first()
 
-        # Check the CAPTCHA regardless of whether the user exists or the password is correct
         if form.captcha.data != session.get('captcha'):
             flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
 
         if user and user.verify_password(form.password.data):
             login_user(user)
+          
+            session.modified = True
+            session.new = True
             flash('Login successful!', 'success')
             return redirect(url_for('products'))
         else:
-            flash('Invalid username or password', 'error')  # Same generic message
+            flash('Invalid username or password', 'error')  
 
     return render_template('login.html', form=form)
 
@@ -302,8 +302,13 @@ def home():
     cart_items = list(current_user.carts.filter_by(purchased=False).all()) if current_user.is_authenticated else []
     return render_template('index.html', cart_items=cart_items)
 
+@app.after_request
+def add_security_headers(response):
+    csp = "default-src 'self'; script-src 'self' https://stackpath.bootstrapcdn.com; style-src 'self' https://stackpath.bootstrapcdn.com https://cdnjs.cloudflare.com"
+    response.headers['Content-Security-Policy'] = csp
+    return response
+
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 
