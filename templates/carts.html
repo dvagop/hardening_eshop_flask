@@ -24,7 +24,7 @@
     <h1>Your Cart</h1>
     <ul class="list-group mb-3">
         {% for item in cart_items %}
-        <li class="list-group-item">{{ item.product.name }}: ${{ item.price }}</li>
+        <li class="list-group-item">{{ item.product.name }}: ${{ item.price }} x {{ item.quantity }} = ${{ item.price * item.quantity }}</li>
         {% endfor %}
     </ul>
     <p>Total Price: ${{ total_price }}</p>
@@ -49,5 +49,6 @@
     </form>
 </div>
 {% endblock %}
+
 
 

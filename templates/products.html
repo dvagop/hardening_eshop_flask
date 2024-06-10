@@ -21,6 +21,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Price</th>
+                    <th>Quantity</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,6 +29,7 @@
                 <tr>
                     <td>{{ item.product.name }}</td>
                     <td>${{ "%.2f"|format(item.price) }}</td>
+                    <td>{{ item.quantity }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -69,5 +71,4 @@
     </table>
 </div>
 {% endblock %}
-
 

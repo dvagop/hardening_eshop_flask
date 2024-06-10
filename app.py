@@ -2,21 +2,26 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm, CSRFProtect
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import InputRequired, Email, Length
+from wtforms.validators import InputRequired, Email, Length, ValidationError
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import or_
 from flask_mail import Mail, Message
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 import os
 from datetime import datetime
-from io import BytesIO
+from dotenv import load_dotenv
 from captcha.image import ImageCaptcha
+import io
 import random
 import string
 
-app = Flask(__name__)
+# Load environment variables from .env file
+load_dotenv()
+
+app = Flask(__name__, static_url_path='/static')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret')
-csrf = CSRFProtect(app) 
+csrf = CSRFProtect(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DB_CONNECTION_STRING']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
@@ -29,8 +34,10 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax'
+    SESSION_COOKIE_SAMESITE='Lax',
 )
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 mail = Mail(app)
 db = SQLAlchemy(app)
@@ -89,6 +96,8 @@ class Carts(db.Model):
     price = db.Column(db.Numeric(10, 2), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     purchased = db.Column(db.Boolean, default=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    order_id=db.Column(db.Integer, db.ForeignKey('orders.order_id'))
 
 class Orders(db.Model):
     __tablename__ = 'orders'
@@ -98,14 +107,6 @@ class Orders(db.Model):
     order_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     total_price = db.Column(db.Numeric(10, 2), nullable=False)
     shipping_address = db.Column(db.String(150), nullable=False)
-
-def valid_address(form, field):
-    if not field.data.strip():
-        raise ValidationError('Shipping address cannot be empty or whitespace.')
-
-class ShippingForm(FlaskForm):
-    shipping_address = StringField('Shipping Address', validators=[InputRequired(), valid_address])
-    submit = SubmitField('Checkout')
 
 class RegistrationForm(FlaskForm):
     first_name = StringField('First Name', validators=[InputRequired()])
@@ -122,13 +123,19 @@ class LoginForm(FlaskForm):
     captcha = StringField('Captcha', validators=[InputRequired()])
     submit = SubmitField('Login')
 
-@app.route('/captcha')
-def captcha():
+def valid_address(form, field):
+    if not field.data.strip():
+        raise ValidationError('Shipping address cannot be empty or whitespace.')
+
+class ShippingForm(FlaskForm):
+    shipping_address = StringField('Shipping Address', validators=[InputRequired(), valid_address])
+    submit = SubmitField('Checkout')
+
+def generate_captcha():
     image = ImageCaptcha()
     captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    session['captcha_text'] = captcha_text
     data = image.generate(captcha_text)
-    return send_file(BytesIO(data.read()), mimetype='image/png')
+    return io.BytesIO(data.getvalue()), captcha_text
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -152,10 +159,9 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        if form.captcha.data.lower() != session.get('captcha_text', '').lower():
-            flash('Invalid CAPTCHA. Please try again.', 'error')
-            return render_template('login.html', form=form)
-
+        if form.captcha.data != session.get('captcha'):
+            flash('Invalid captcha', 'error')
+            return redirect(url_for('login'))
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.verify_password(form.password.data):
             login_user(user)
@@ -164,6 +170,12 @@ def login():
         else:
             flash('Invalid username or password', 'error')
     return render_template('login.html', form=form)
+
+@app.route('/captcha')
+def captcha():
+    image, captcha_text = generate_captcha()
+    session['captcha'] = captcha_text
+    return send_file(image, mimetype='image/png')
 
 @app.route('/logout')
 @login_required
@@ -177,7 +189,6 @@ def logout():
             db.session.rollback()
             app.logger.error("Failed to delete cart items: %s", str(e))
             flash('Failed to clear cart items due to an error.', 'error')
-
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
@@ -194,19 +205,24 @@ def products():
         num_results = 0
 
     total_products = Product.query.count()
-
     cart_items = list(current_user.carts.filter_by(purchased=False).all())
 
-    return render_template('products.html', search_results=search_results,
-                           num_results=num_results, total_products=total_products,
+    return render_template('products.html', search_results=search_results, 
+                           num_results=num_results, total_products=total_products, 
                            search_query=search_query, cart_items=cart_items)
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 @login_required
 def add_to_cart(product_id):
     product = Product.query.get_or_404(product_id)
-    new_cart_entry = Carts(user_id=current_user.id, product_id=product_id, price=product.price)
-    db.session.add(new_cart_entry)
+    cart_item = Carts.query.filter_by(user_id=current_user.id, product_id=product_id, purchased=False).first()
+
+    if cart_item:
+        cart_item.quantity += 1
+    else:
+        cart_item = Carts(user_id=current_user.id, product_id=product_id, price=product.price, quantity=1)
+        db.session.add(cart_item)
+
     db.session.commit()
     flash('Product added to cart successfully!', 'success')
     return redirect(url_for('products'))
@@ -217,7 +233,7 @@ def cart():
     form = ShippingForm()
     if request.method == 'POST' and form.validate_on_submit():
         cart_items = Carts.query.filter_by(user_id=current_user.id, purchased=False).all()
-        total_price = sum(item.price for item in cart_items)
+        total_price = sum(item.price * item.quantity for item in cart_items)
         shipping_address = form.shipping_address.data
 
         new_order = Orders(
@@ -240,7 +256,7 @@ def cart():
         return redirect(url_for('home'))
 
     cart_items = Carts.query.filter_by(user_id=current_user.id, purchased=False).all()
-    total_price = sum(item.price for item in cart_items)
+    total_price = sum(item.price * item.quantity for item in cart_items)
     return render_template('carts.html', cart_items=cart_items, total_price=total_price, form=form)
 
 def send_order_confirmation_email(order, user, cart_items):
@@ -257,7 +273,7 @@ def send_order_confirmation_email(order, user, cart_items):
     Products:
     """
     for item in cart_items:
-        body += f"- {item.product.name}: ${item.price}\n"
+        body += f"- {item.product.name}: ${item.price} x {item.quantity} = ${item.price * item.quantity}\n"
 
     msg = Message(subject, recipients=[admin_email])
     msg.body = body
